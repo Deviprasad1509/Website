@@ -1,76 +1,95 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Eye, Download } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Search, Eye, Download, Loader2 } from "lucide-react"
+import { db } from "@/lib/database.service"
+import { toast } from "@/hooks/use-toast"
 
-const orders = [
-  {
-    id: "ORD-001",
-    customer: "John Doe",
-    email: "john@example.com",
-    total: 24.99,
-    status: "completed",
-    date: "2024-01-15",
-    items: 1,
-  },
-  {
-    id: "ORD-002",
-    customer: "Jane Smith",
-    email: "jane@example.com",
-    total: 43.98,
-    status: "processing",
-    date: "2024-01-15",
-    items: 2,
-  },
-  {
-    id: "ORD-003",
-    customer: "Bob Johnson",
-    email: "bob@example.com",
-    total: 32.97,
-    status: "completed",
-    date: "2024-01-14",
-    items: 2,
-  },
-  {
-    id: "ORD-004",
-    customer: "Alice Brown",
-    email: "alice@example.com",
-    total: 16.99,
-    status: "pending",
-    date: "2024-01-14",
-    items: 1,
-  },
-  {
-    id: "ORD-005",
-    customer: "Charlie Wilson",
-    email: "charlie@example.com",
-    total: 67.95,
-    status: "completed",
-    date: "2024-01-13",
-    items: 3,
-  },
-]
+interface OrderItem {
+  id: string
+  order_id: string
+  ebook_id: string
+  price: number
+  ebook: {
+    title: string
+    author: string
+  }
+}
+
+interface Order {
+  id: string
+  user_id: string
+  total_amount: number
+  payment_status: 'pending' | 'completed' | 'failed'
+  payment_id: string | null
+  created_at: string
+  profiles: {
+    first_name: string
+    last_name: string
+    email: string
+  }
+  order_items: OrderItem[]
+}
 
 export function OrderManagement() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.email.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    loadOrders()
+  }, [])
 
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
+  useEffect(() => {
+    const filtered = orders.filter((order) => {
+      const customerName = `${order.profiles.first_name} ${order.profiles.last_name}`
+      const matchesSearch =
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
 
-    return matchesSearch && matchesStatus
-  })
+      const matchesStatus = statusFilter === "all" || order.payment_status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+    setFilteredOrders(filtered)
+  }, [orders, searchTerm, statusFilter])
+
+  const loadOrders = async () => {
+    try {
+      const { data, error } = await db.getAllOrders()
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load orders",
+          variant: "destructive",
+        })
+      } else if (data) {
+        setOrders(data)
+        setFilteredOrders(data)
+      }
+    } catch (err) {
+      console.error('Error loading orders:', err)
+      toast({
+        title: "Error",
+        description: "Failed to load orders",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -80,9 +99,25 @@ export function OrderManagement() {
         return "secondary"
       case "pending":
         return "outline"
+      case "failed":
+        return "destructive"
       default:
         return "outline"
     }
+  }
+
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order)
+    setIsViewDialogOpen(true)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading orders...</span>
+      </div>
+    )
   }
 
   return (
@@ -114,8 +149,8 @@ export function OrderManagement() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -135,28 +170,107 @@ export function OrderManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell>{order.email}</TableCell>
-                  <TableCell>{order.items}</TableCell>
-                  <TableCell>${order.total.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
-                  </TableCell>
-                  <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+              {filteredOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    No orders found
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">
+                      <span className="font-mono text-sm">{order.id.slice(0, 8)}...</span>
+                    </TableCell>
+                    <TableCell>{`${order.profiles.first_name} ${order.profiles.last_name}`}</TableCell>
+                    <TableCell>{order.profiles.email}</TableCell>
+                    <TableCell>{order.order_items?.length || 0}</TableCell>
+                    <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusVariant(order.payment_status)}>{order.payment_status}</Badge>
+                    </TableCell>
+                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleViewOrder(order)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Order Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Order ID</p>
+                  <p className="font-mono text-sm">{selectedOrder.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Date</p>
+                  <p>{new Date(selectedOrder.created_at).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                  <p>{`${selectedOrder.profiles.first_name} ${selectedOrder.profiles.last_name}`}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
+                  <p>{selectedOrder.profiles.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <Badge variant={getStatusVariant(selectedOrder.payment_status)}>
+                    {selectedOrder.payment_status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total</p>
+                  <p className="text-lg font-semibold">${selectedOrder.total_amount.toFixed(2)}</p>
+                </div>
+              </div>
+              
+              {selectedOrder.order_items && selectedOrder.order_items.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Items Ordered</p>
+                  <div className="space-y-2">
+                    {selectedOrder.order_items.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                        <div>
+                          <p className="font-medium">{item.ebook?.title || 'Unknown Book'}</p>
+                          <p className="text-sm text-muted-foreground">{item.ebook?.author || 'Unknown Author'}</p>
+                        </div>
+                        <p className="font-semibold">${item.price.toFixed(2)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {selectedOrder.payment_id && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Payment ID</p>
+                  <p className="font-mono text-sm">{selectedOrder.payment_id}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

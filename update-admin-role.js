@@ -1,11 +1,22 @@
 // Node.js script to manually update user roles
 // You need to install supabase-js: npm install @supabase/supabase-js
 
+// Load environment variables from .env.local
+require('dotenv').config({ path: '.env.local' })
+
 const { createClient } = require('@supabase/supabase-js')
 
-// IMPORTANT: Replace these with your actual values from .env.local
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL_HERE'
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'YOUR_SERVICE_ROLE_KEY_HERE'
+// Load from environment variables
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ Missing required environment variables:')
+  console.error('   NEXT_PUBLIC_SUPABASE_URL:', SUPABASE_URL ? '✅ Set' : '❌ Missing')
+  console.error('   SUPABASE_SERVICE_ROLE_KEY:', SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing')
+  console.error('\n💡 Make sure these are set in your .env.local file')
+  process.exit(1)
+}
 
 // Create Supabase client with service role key (bypasses RLS)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

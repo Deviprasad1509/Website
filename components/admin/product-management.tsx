@@ -266,6 +266,25 @@ export function ProductManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          {editingBook && (
+            <EditProductForm 
+              book={editingBook}
+              onClose={() => {
+                setIsEditDialogOpen(false)
+                setEditingBook(null)
+              }} 
+              onBookUpdated={handleBookUpdated} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -492,6 +511,265 @@ function AddProductForm({ onClose, onBookAdded }: { onClose: () => void; onBookA
             </>
           ) : (
             'Add Product'
+          )}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function EditProductForm({ book, onClose, onBookUpdated }: { book: Book; onClose: () => void; onBookUpdated: () => void }) {
+  const [formData, setFormData] = useState({
+    title: book.title,
+    author: book.author,
+    category: book.category,
+    price: book.price.toString(),
+    description: book.description,
+    tags: book.tags ? book.tags.join(', ') : '',
+    is_featured: book.is_featured
+  })
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.title || !formData.author || !formData.category || !formData.price) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Prepare update data
+      const updateData: any = {
+        title: formData.title,
+        author: formData.author,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        description: formData.description,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : null,
+        is_featured: formData.is_featured
+      }
+
+      // Upload new files if provided
+      if (coverFile) {
+        const { url, error } = await fileUploadService.uploadBookCover(coverFile, book.id)
+        if (error) {
+          console.error('Error uploading cover:', error)
+          toast({
+            title: "Warning",
+            description: "Failed to upload new cover image",
+            variant: "destructive",
+          })
+        } else {
+          updateData.cover_image = url
+        }
+      }
+
+      if (pdfFile) {
+        const { url, error } = await fileUploadService.uploadBookPdf(pdfFile, book.id)
+        if (error) {
+          console.error('Error uploading PDF:', error)
+          toast({
+            title: "Warning",
+            description: "Failed to upload new PDF file",
+            variant: "destructive",
+          })
+        } else {
+          updateData.pdf_url = url
+        }
+      }
+
+      // Update the book
+      const { success, error } = await db.updateEbook(book.id, updateData)
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Book updated successfully",
+        })
+        onBookUpdated()
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update book",
+          variant: "destructive",
+        })
+      }
+    } catch (err) {
+      console.error('Error updating book:', err)
+      toast({
+        title: "Error",
+        description: "Failed to update book",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="edit-title">Title *</Label>
+          <Input 
+            id="edit-title" 
+            placeholder="Book title"
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-author">Author *</Label>
+          <Input 
+            id="edit-author" 
+            placeholder="Author name"
+            value={formData.author}
+            onChange={(e) => handleInputChange('author', e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="edit-category">Category *</Label>
+          <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="edit-price">Price *</Label>
+          <Input 
+            id="edit-price" 
+            type="number" 
+            step="0.01" 
+            placeholder="0.00"
+            value={formData.price}
+            onChange={(e) => handleInputChange('price', e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="edit-description">Description</Label>
+        <Textarea 
+          id="edit-description" 
+          placeholder="Book description" 
+          rows={4}
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
+        <Input 
+          id="edit-tags" 
+          placeholder="Fiction, Adventure, Classic"
+          value={formData.tags}
+          onChange={(e) => handleInputChange('tags', e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="edit-featured"
+          checked={formData.is_featured}
+          onCheckedChange={(checked) => handleInputChange('is_featured', checked)}
+        />
+        <Label htmlFor="edit-featured">Featured Book</Label>
+      </div>
+
+      {/* Current files display */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Current Cover</Label>
+          {book.cover_image ? (
+            <div className="flex items-center space-x-2">
+              <Image 
+                src={book.cover_image} 
+                alt="Current cover" 
+                width={60} 
+                height={80} 
+                className="rounded object-cover"
+              />
+              <span className="text-sm text-muted-foreground">Current cover image</span>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No cover image</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>Current PDF</Label>
+          {book.pdf_url ? (
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5" />
+              <span className="text-sm text-muted-foreground">PDF file available</span>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No PDF file</p>
+          )}
+        </div>
+      </div>
+
+      {/* New file uploads */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="edit-cover">Upload New Cover (optional)</Label>
+          <Input
+            id="edit-cover"
+            type="file"
+            accept="image/*"
+            onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-pdf">Upload New PDF (optional)</Label>
+          <Input
+            id="edit-pdf"
+            type="file"
+            accept=".pdf"
+            onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onClose} className="bg-transparent">
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            'Update Product'
           )}
         </Button>
       </div>
