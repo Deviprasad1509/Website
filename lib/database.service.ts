@@ -122,7 +122,6 @@ class DatabaseService {
       return { data: null as any, error: error as any };
     }
   }
-  }
 
   async updateOrderPaymentStatus(
     orderId: string,

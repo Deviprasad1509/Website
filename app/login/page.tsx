@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/login-form"
+import { Suspense } from "react"
 import Link from "next/link"
 import { BookOpen } from "lucide-react"
 
@@ -15,7 +16,9 @@ export default function LoginPage() {
           <p className="text-muted-foreground mt-2">Sign in to your account to continue</p>
         </div>
 
-        <LoginForm />
+        <Suspense fallback={<div className="text-center">Loading...</div>}>
+          <LoginForm />
+        </Suspense>
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">

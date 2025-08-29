@@ -17,9 +17,10 @@ function OrdersPageInner() {
 
   useEffect(() => {
     if (!state.isAuthenticated && !state.isLoading) {
-      router.push("/login")
+      const redirect = `/login?next=${encodeURIComponent('/orders' + (orderId ? `?orderId=${orderId}` : ''))}`
+      router.replace(redirect)
     }
-  }, [state.isAuthenticated, state.isLoading, router])
+  }, [state.isAuthenticated, state.isLoading, router, orderId])
 
   if (state.isLoading || !state.isAuthenticated) {
     return (

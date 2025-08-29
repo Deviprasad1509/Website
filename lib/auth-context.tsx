@@ -91,49 +91,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loadUserProfile = async (authUser: FirebaseUser) => {
-    console.log('🔍 Loading profile for user:', authUser.id, authUser.email)
-    
+    console.log('🔍 Loading profile for user (Firestore):', authUser.uid, authUser.email)
     try {
       const ref = doc(db, 'profiles', authUser.uid)
       const snap = await getDoc(ref)
-
       if (!snap.exists()) {
-        const profileData = {
-          id: authUser.uid,
-          email: authUser.email || '',
-          first_name: 'User',
-          last_name: 'Name',
-          role: 'user' as const,
-          avatar_url: null as string | null,
-          created_at: serverTimestamp(),
-        }
-        await setDoc(ref, profileData)
-        const user: User = {
-          id: profileData.id,
-          email: profileData.email,
-          firstName: profileData.first_name,
-          lastName: profileData.last_name,
-          role: profileData.role,
-          avatar: undefined,
-          createdAt: new Date().toISOString(),
-        }
-        dispatch({ type: "LOGIN_SUCCESS", payload: user })
+        console.error('❌ Profile document not found in Firestore for user:', authUser.uid)
+        dispatch({ type: "LOGIN_FAILURE" })
         return
       }
-
       const p = snap.data() as any
       const user: User = {
-        id: p.id,
-        email: p.email,
-        firstName: p.first_name,
-        lastName: p.last_name,
-        role: p.role,
+        id: p.id || authUser.uid,
+        email: p.email || authUser.email || '',
+        firstName: p.first_name || '',
+        lastName: p.last_name || '',
+        role: p.role || 'user',
         avatar: p.avatar_url || undefined,
-        createdAt: (p.created_at?.toDate?.() ?? new Date()).toISOString(),
+        createdAt: (p.created_at && typeof p.created_at.toDate === 'function') ? p.created_at.toDate().toISOString() : (p.created_at || new Date().toISOString()),
       }
       dispatch({ type: "LOGIN_SUCCESS", payload: user })
     } catch (error) {
-      console.error('❌ Exception in loadUserProfile:', error)
+      console.error('❌ Exception in loadUserProfile (Firestore):', error)
       dispatch({ type: "LOGIN_FAILURE" })
     }
   }

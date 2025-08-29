@@ -55,10 +55,8 @@ export function Footer() {
                   Shipping Info
                 </Link>
               </li>
-              <li>
-                <Link href="/returns" className="text-muted-foreground hover:text-primary">
-                  Returns
-                </Link>
+              <li className="text-muted-foreground">
+                No refunds.
               </li>
               <li>
                 <Link href="/contact" className="text-muted-foreground hover:text-primary">

@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const { login, state } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +26,9 @@ export function LoginForm() {
 
     const success = await login(email, password)
     if (success) {
-      router.push("/")
+      const next = searchParams.get("next")
+      const safeNext = next && next.startsWith("/") ? next : "/"
+      router.replace(safeNext)
     } else {
       setError("Invalid email or password")
     }

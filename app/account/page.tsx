@@ -12,7 +12,8 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!state.isAuthenticated && !state.isLoading) {
-      router.push("/login")
+      const redirect = `/login?next=${encodeURIComponent('/account')}`
+      router.replace(redirect)
     }
   }, [state.isAuthenticated, state.isLoading, router])
 

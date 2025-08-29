@@ -1,0 +1,19 @@
+{
+  "name": "functions",
+  "type": "commonjs",
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.0.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
+
+
