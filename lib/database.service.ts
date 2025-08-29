@@ -1,121 +1,95 @@
+import { supabase } from './supabase/client'
+// Firebase client import kept for any non-database usage
 import { db as firestore } from './firebase/client'
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  limit as qLimit,
-  serverTimestamp,
-} from 'firebase/firestore'
 
 class DatabaseService {
   // Ebooks
 
   async getEbooks(filters?: { category?: string; featured?: boolean; limit?: number }) {
     try {
-      const col = collection(firestore, 'ebooks')
-      const clauses: any[] = []
-      if (filters?.category) clauses.push(where('category', '==', filters.category))
-      if (filters?.featured !== undefined) clauses.push(where('is_featured', '==', filters.featured))
-      let q = clauses.length ? query(col, ...clauses, orderBy('created_at', 'desc')) : query(col, orderBy('created_at', 'desc'))
-      if (filters?.limit) q = query(q, qLimit(filters.limit))
-      const snap = await getDocs(q)
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-      return { data, error: null as any }
+      let query = supabase.from('ebooks').select('*');
+      if (filters?.category) query = query.eq('category', filters.category);
+      if (filters?.featured !== undefined) query = query.eq('is_featured', filters.featured);
+      query = query.order('created_at', { ascending: false });
+      if (filters?.limit) query = query.limit(filters.limit);
+      const { data, error } = await query;
+      return { data, error };
     } catch (error) {
-      console.error('Error fetching ebooks:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching ebooks:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async getEbookById(id: string) {
     try {
-      const ref = doc(firestore, 'ebooks', id)
-      const snap = await getDoc(ref)
-      if (!snap.exists()) return { data: null as any, error: new Error('Not found') as any }
-      return { data: { id: snap.id, ...snap.data() } as any, error: null as any }
+      const { data, error } = await supabase.from('ebooks').select('*').eq('id', id).single();
+      if (error) return { data: null, error };
+      return { data, error: null };
     } catch (error) {
-      console.error('Error fetching ebook:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching ebook:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async createEbook(ebook: any) {
     try {
-      const col = collection(firestore, 'ebooks')
-      const docRef = await addDoc(col, { ...ebook, created_at: serverTimestamp() })
-      const snap = await getDoc(docRef)
-      return { data: { id: snap.id, ...snap.data() } as any, error: null as any }
+      const { data, error } = await supabase.from('ebooks').insert([{ ...ebook }]).single();
+      return { data, error };
     } catch (error) {
-      console.error('Error creating ebook:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error creating ebook:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async updateEbook(id: string, updates: any) {
     try {
-      const ref = doc(firestore, 'ebooks', id)
-      await updateDoc(ref, updates)
-      const snap = await getDoc(ref)
-      return { data: { id: snap.id, ...snap.data() } as any, error: null as any }
+      const { data, error } = await supabase.from('ebooks').update(updates).eq('id', id).single();
+      return { data, error };
     } catch (error) {
-      console.error('Error updating ebook:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error updating ebook:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async deleteEbook(id: string) {
     try {
-      const ref = doc(firestore, 'ebooks', id)
-      await deleteDoc(ref)
-      return { success: true, error: null as any }
+      const { error } = await supabase.from('ebooks').delete().eq('id', id);
+      return { success: !error, error };
     } catch (error) {
-      console.error('Error deleting ebook:', error)
-      return { success: false, error: error as any }
+      console.error('Error deleting ebook:', error);
+      return { success: false, error: error as any };
     }
   }
 
   // User Profile
   async getProfile(userId: string) {
     try {
-      const ref = doc(firestore, 'profiles', userId)
-      const snap = await getDoc(ref)
-      if (!snap.exists()) return { data: null as any, error: new Error('Not found') as any }
-      return { data: snap.data() as any, error: null as any }
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (error) return { data: null, error };
+      return { data, error: null };
     } catch (error) {
-      console.error('Error fetching profile:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching profile:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async updateProfile(userId: string, updates: any) {
     try {
-      const ref = doc(firestore, 'profiles', userId)
-      await updateDoc(ref, updates)
-      const snap = await getDoc(ref)
-      return { data: snap.data() as any, error: null as any }
+      const { data, error } = await supabase.from('profiles').update(updates).eq('id', userId).single();
+      return { data, error };
     } catch (error) {
-      console.error('Error updating profile:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error updating profile:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async getAllProfiles() {
     try {
-      const col = collection(firestore, 'profiles')
-      const snap = await getDocs(query(col, orderBy('created_at', 'desc')))
-      const data = snap.docs.map(d => d.data()) as any[]
-      return { data, error: null as any }
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      return { data, error };
     } catch (error) {
-      console.error('Error fetching profiles:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching profiles:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
@@ -125,37 +99,33 @@ class DatabaseService {
     totalAmount: number;
     items: Array<{ ebookId: string; price: number }>;
   }) {
-    const { userId, totalAmount, items } = orderData
+    const { userId, totalAmount, items } = orderData;
     try {
-      const ordersCol = collection(firestore, 'orders')
-      const orderRef = await addDoc(ordersCol, {
-        user_id: userId,
-        total_amount: totalAmount,
-        payment_status: 'pending',
-        created_at: serverTimestamp(),
-      })
-      const orderId = orderRef.id
-      const itemsCol = collection(firestore, 'order_items')
-      const createdItems: any[] = []
-      for (const item of items) {
-        const ir = await addDoc(itemsCol, {
-          order_id: orderId,
-          ebook_id: item.ebookId,
-          price: item.price,
-        })
-        const snap = await getDoc(ir)
-        createdItems.push({ id: snap.id, ...snap.data() })
-      }
-      const orderSnap = await getDoc(orderRef)
-      return { data: { order: { id: orderId, ...orderSnap.data() }, items: createdItems } as any, error: null as any }
+      // Insert order
+      const { data: order, error: orderError } = await supabase.from('orders').insert([
+        {
+          user_id: userId,
+          total_amount: totalAmount,
+          payment_status: 'pending',
+          created_at: new Date().toISOString(),
+        },
+      ]).select('*').single();
+      if (orderError || !order) throw orderError;
+      const orderId = order.id;
+      // Insert order items
+      const { data: orderItems, error: itemsError } = await supabase.from('order_items').insert(
+        items.map(i => ({ order_id: orderId, ebook_id: i.ebookId, price: i.price }))
+      ).select();
+      return { data: { order, items: orderItems }, error: null };
     } catch (error) {
-      console.error('Error creating order:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error creating order:', error);
+      return { data: null as any, error: error as any };
     }
+  }
   }
 
   async updateOrderPaymentStatus(
-    orderId: string, 
+    orderId: string,
     status: 'pending' | 'completed' | 'failed',
     paymentData?: {
       razorpayOrderId?: string;
@@ -164,72 +134,73 @@ class DatabaseService {
     }
   ) {
     try {
-      const ref = doc(firestore, 'orders', orderId)
-      await updateDoc(ref, { payment_status: status, ...paymentData })
+      // Update order
+      const { data, error } = await supabase.from('orders').update({ payment_status: status, ...paymentData }).eq('id', orderId).select('*').single();
+      if (error) throw error;
       if (status === 'completed') {
-        await this.addBooksToUserLibrary(orderId)
+        await this.addBooksToUserLibrary(orderId);
       }
-      const snap = await getDoc(ref)
-      return { data: { id: snap.id, ...snap.data() } as any, error: null as any }
+      return { data, error: null };
     } catch (error) {
-      console.error('Error updating order payment status:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error updating order payment status:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   private async addBooksToUserLibrary(orderId: string) {
     try {
-      const orderRef = doc(firestore, 'orders', orderId)
-      const orderSnap = await getDoc(orderRef)
-      const order = orderSnap.data() as any
-      if (!order) return
-      const itemsSnap = await getDocs(query(collection(firestore, 'order_items'), where('order_id', '==', orderId)))
-      const batchItems = itemsSnap.docs.map(d => d.data()) as any[]
-      for (const item of batchItems) {
-        const libId = `${order.user_id}_${item.ebook_id}`
-        await setDoc(doc(firestore, 'user_library', libId), {
+      // Fetch order
+      const { data: order, error: orderError } = await supabase.from('orders').select('*').eq('id', orderId).single();
+      if (orderError || !order) return;
+      // Fetch order items
+      const { data: items, error: itemsError } = await supabase.from('order_items').select('*').eq('order_id', orderId);
+      if (itemsError || !items) return;
+      // Insert user_library entries
+      for (const item of items) {
+        const upsertObj = {
           user_id: order.user_id,
           ebook_id: item.ebook_id,
           download_count: 0,
-          purchased_at: serverTimestamp(),
-        }, { merge: true })
+          purchased_at: new Date().toISOString(),
+        };
+        await supabase.from('user_library').upsert([upsertObj], { onConflict: ['user_id', 'ebook_id'] });
       }
     } catch (e) {
-      console.error('Error adding books to library:', e)
+      console.error('Error adding books to library:', e);
     }
   }
 
   async getUserOrders(userId: string) {
     try {
-      const ordersSnap = await getDocs(query(collection(firestore, 'orders'), where('user_id', '==', userId), orderBy('created_at', 'desc')))
-      const orders = [] as any[]
-      for (const d of ordersSnap.docs) {
-        const order = { id: d.id, ...d.data() } as any
-        const itemsSnap = await getDocs(query(collection(firestore, 'order_items'), where('order_id', '==', d.id)))
-        order.order_items = itemsSnap.docs.map(i => ({ id: i.id, ...i.data() }))
-        orders.push(order)
-      }
-      return { data: orders as any, error: null as any }
+      // Fetch orders for user
+      const { data: orders, error } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      if (error || !orders) return { data: null, error };
+      // Attach order_items for each order
+      const withItems = await Promise.all(orders.map(async (order: any) => {
+        const { data: items } = await supabase.from('order_items').select('*').eq('order_id', order.id);
+        return { ...order, order_items: items || [] };
+      }));
+      return { data: withItems, error: null };
     } catch (error) {
-      console.error('Error fetching user orders:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching user orders:', error);
+      return { data: null as any, error: error as any };
     }
   }
 
   async getAllOrders() {
     try {
-      const ordersSnap = await getDocs(query(collection(firestore, 'orders'), orderBy('created_at', 'desc')))
-      const orders = [] as any[]
-      for (const d of ordersSnap.docs) {
-        const order = { id: d.id, ...d.data() } as any
-        const itemsSnap = await getDocs(query(collection(firestore, 'order_items'), where('order_id', '==', d.id)))
-        order.order_items = itemsSnap.docs.map(i => ({ id: i.id, ...i.data() }))
-        orders.push(order)
-      }
-      return { data: orders as any, error: null as any }
+      // Fetch all orders
+      const { data: orders, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      if (error || !orders) return { data: null, error };
+      // Attach order_items for each order
+      const withItems = await Promise.all(orders.map(async (order: any) => {
+        const { data: items } = await supabase.from('order_items').select('*').eq('order_id', order.id);
+        return { ...order, order_items: items || [] };
+      }));
+      return { data: withItems, error: null };
     } catch (error) {
-      console.error('Error fetching all orders:', error)
-      return { data: null as any, error: error as any }
+      console.error('Error fetching all orders:', error);
+      return { data: null as any, error: error as any };
     }
   }
 

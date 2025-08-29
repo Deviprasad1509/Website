@@ -12,19 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { toast } from "@/hooks/use-toast"
 import { Plus, Edit, Trash2, Search, Loader2, FolderOpen, BookOpen } from "lucide-react"
-import { db as firestore } from "@/lib/firebase/client"
-import { 
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp
-} from "firebase/firestore"
+import { supabase } from "@/lib/supabase/client"
 
 interface Category {
   id: string
@@ -45,8 +33,8 @@ export function CatalogManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [bookCounts, setBookCounts] = useState<{ [key: string]: number }>({})
 
-  // Firestore collections
-  const categoriesCol = collection(firestore, 'categories')
+  // Supabase table
+  // NOTE: All category queries now use Supabase
 
   useEffect(() => {
     loadCategories()
@@ -62,15 +50,17 @@ export function CatalogManagement() {
 
   const loadCategories = async () => {
     try {
-      const snap = await getDocs(query(categoriesCol, orderBy('name', 'asc')))
-      const categoriesData = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) })) as Category[]
-      setCategories(categoriesData)
-      setFilteredCategories(categoriesData)
+      // Fetch all categories from Supabase
+      const { data: categoriesData, error } = await supabase.from('categories').select('*').order('name', { ascending: true })
+      if (error) throw error;
+      setCategories(categoriesData || [])
+      setFilteredCategories(categoriesData || [])
 
+      // Get book counts for each category (Supabase)
       const counts: { [key: string]: number } = {}
-      for (const category of categoriesData) {
-        const ebooksSnap = await getDocs(query(collection(firestore, 'ebooks'), where('category', '==', category.name)))
-        counts[category.id] = ebooksSnap.size
+      for (const category of categoriesData || []) {
+        const { count } = await supabase.from('ebooks').select('id', { count: 'exact', head: true }).eq('category', category.name)
+        counts[category.id] = count || 0
       }
       setBookCounts(counts)
     } catch (err) {
@@ -92,20 +82,20 @@ export function CatalogManagement() {
 
   const handleDeleteCategory = async (categoryId: string) => {
     try {
-      // Check if category has books
+      // Check if category has books (Supabase)
       const category = categories.find(c => c.id === categoryId)
-      const ebooksSnap = await getDocs(query(collection(firestore, 'ebooks'), where('category', '==', category?.name)))
-
-      if (ebooksSnap.size > 0) {
+      const { count } = await supabase.from('ebooks').select('id', { count: 'exact', head: true }).eq('category', category?.name)
+      if (count && count > 0) {
         toast({
           title: "Cannot Delete Category",
-          description: `This category has ${ebooksSnap.size} books. Please move or delete the books first.`,
+          description: `This category has ${count} books. Please move or delete the books first.`,
           variant: "destructive",
         })
         return
       }
-
-      await deleteDoc(doc(firestore, 'categories', categoryId))
+      // Delete from Supabase
+      const { error } = await supabase.from('categories').delete().eq('id', categoryId)
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -336,13 +326,17 @@ function AddCategoryForm({ onClose, onCategoryAdded }: { onClose: () => void; on
     try {
       const slug = createSlug(formData.name)
 
-      await addDoc(collection(firestore, 'categories'), {
-        name: formData.name.trim(),
-        description: formData.description.trim() || null,
-        slug,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      })
+      const { error } = await supabase.from('categories').insert([
+        {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+          slug,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      ])
+
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -454,12 +448,14 @@ function EditCategoryForm({
     try {
       const slug = createSlug(formData.name)
 
-      await updateDoc(doc(firestore, 'categories', category.id), {
+      const { error } = await supabase.from('categories').update({
         name: formData.name.trim(),
         description: formData.description.trim() || null,
         slug,
-        updated_at: serverTimestamp(),
-      })
+        updated_at: new Date().toISOString(),
+      }).eq('id', category.id)
+
+      if (error) throw error;
 
       toast({
         title: "Success",
