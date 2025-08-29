@@ -6,10 +6,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start",
+    "start": "npx serve@latest out",
     "export": "next build",
     "deploy": "npm run export && firebase deploy --only hosting",
-    "deploy:preview": "npm run export && firebase hosting:channel:deploy"
+    "deploy:preview": "npm run export && firebase hosting:channel:deploy",
+    "preview": "npm run export && npx serve@latest out"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
