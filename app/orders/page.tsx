@@ -1,14 +1,19 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+export const dynamic = 'force-static'
+
+import { useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { OrderHistory } from "@/components/order-history"
+import { OrderDetail } from "@/components/order-detail"
 import { useAuth } from "@/lib/auth-context"
 
-export default function OrdersPage() {
+function OrdersPageInner() {
   const { state } = useAuth()
   const router = useRouter()
+  const params = useSearchParams()
+  const orderId = params.get('orderId') || ""
 
   useEffect(() => {
     if (!state.isAuthenticated && !state.isLoading) {
@@ -31,8 +36,20 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <OrderHistory />
+        {orderId ? (
+          <OrderDetail orderId={orderId} />
+        ) : (
+          <OrderHistory />
+        )}
       </div>
     </div>
+  )
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background"><Header /><div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8"><div className="text-center">Loading...</div></div></div>}>
+      <OrdersPageInner />
+    </Suspense>
   )
 }

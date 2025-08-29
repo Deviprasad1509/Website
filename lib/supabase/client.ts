@@ -1,12 +1,6 @@
-import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '../database.types'
-
+// Replace supabase client: this project has migrated to Firebase.
+// Any import of this file should be removed. Temporary shim to prevent build-time missing module errors.
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+	throw new Error('Supabase has been removed. Use Firestore via lib/firebase/client instead.')
 }
-
-// For legacy compatibility if needed
-export const supabase = createClient()
+export const supabase = undefined as unknown as never

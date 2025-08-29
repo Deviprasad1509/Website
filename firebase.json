@@ -1,0 +1,11 @@
+{
+  "hosting": {
+    "site": "buisbuz-ebook-store-2025-aa12f",
+    "public": "out",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

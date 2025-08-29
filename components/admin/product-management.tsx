@@ -186,6 +186,7 @@ export function ProductManagement() {
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>PDF Status</TableHead>
+                <TableHead>Download</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -224,6 +225,15 @@ export function ProductManagement() {
                         {book.pdf_url ? "Available" : "No PDF"}
                       </Badge>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {book.pdf_url ? (
+                      <a href={book.pdf_url} download className="text-sm underline" target="_blank" rel="noopener noreferrer">
+                        Download PDF
+                      </a>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="default">Active</Badge>

@@ -44,7 +44,7 @@ export function BookCard({ book }: BookCardProps) {
   }
 
   return (
-    <Link href={`/book/${book.id}`}>
+    <Link href={`/book?id=${book.id}`}>
       <Card className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
         <CardContent className="p-4">
           <div className="relative mb-4">

@@ -89,8 +89,14 @@ export function UserProfile() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs defaultValue={state.user.role === 'admin' ? 'admin' : 'profile'} className="space-y-6">
         <TabsList>
+          {state.user.role === 'admin' && (
+            <TabsTrigger value="admin" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Admin Panel</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="profile" className="flex items-center space-x-2">
             <User className="h-4 w-4" />
             <span>Profile</span>
@@ -112,6 +118,32 @@ export function UserProfile() {
             <span>Settings</span>
           </TabsTrigger>
         </TabsList>
+
+        {state.user.role === 'admin' && (
+          <TabsContent value="admin">
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Panel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/admin">
+                    <Button>Open Admin Dashboard</Button>
+                  </Link>
+                  <Link href="/admin/products">
+                    <Button variant="outline" className="bg-transparent">Manage Products</Button>
+                  </Link>
+                  <Link href="/admin/catalog">
+                    <Button variant="outline" className="bg-transparent">Manage Categories</Button>
+                  </Link>
+                  <Link href="/admin/orders">
+                    <Button variant="outline" className="bg-transparent">Manage Orders</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="profile">
           <Card>

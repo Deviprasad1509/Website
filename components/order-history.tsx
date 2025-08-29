@@ -166,7 +166,7 @@ export function OrderHistory() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <Link href={`/orders/${order.id}`}>
+                      <Link href={`/orders?orderId=${order.id}`}>
                         <Button variant="outline" size="sm" className="bg-transparent">
                           <Eye className="h-4 w-4 mr-2" />
                           View Details

@@ -353,7 +353,7 @@ export default function LibraryPage() {
                         {book.pdf_url ? 'Download PDF' : 'PDF Not Available'}
                       </Button>
                       
-                      <Link href={`/book/${book.id}`} className="w-full">
+                      <Link href={`/book?id=${book.id}`} className="w-full">
                         <Button variant="outline" className="w-full bg-transparent">
                           <FileText className="h-4 w-4 mr-2" />
                           View Details
